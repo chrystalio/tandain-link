@@ -17,6 +17,8 @@ return new class extends Migration
             $table->string('name', 100);
             $table->string('slug', 120);
             $table->text('description')->nullable();
+            $table->string('icon')->nullable();
+            $table->string('color')->nullable();
             $table->timestamps();
 
             $table->unique(['user_id', 'slug']);
