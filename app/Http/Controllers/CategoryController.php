@@ -7,15 +7,15 @@ use App\Http\Requests\UpdateCategoryRequest;
 use App\Models\Category;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Inertia\Inertia;
 use Inertia\Response;
 
 class CategoryController extends Controller
 {
     public function index(Request $request): Response
     {
-        $perPage = $request->query('perPage', 10);
+        $perPage = $request->query('per_page', 10);
         $categories = Category::query()->where('user_id', $request->user()->id)
             ->latest()
             ->paginate($perPage);
@@ -27,25 +27,43 @@ class CategoryController extends Controller
 
     public function store(StoreCategoryRequest $request): RedirectResponse
     {
-        $request->user()->categories()->create($request->validated());
+        try {
+            DB::transaction(function () use ($request): void {
+                $request->user()->categories()->create($request->validated());
+            });
 
-        return back();
+            return back()->with('success', 'Category created successfully.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Failed to create category.');
+        }
     }
 
     public function update(UpdateCategoryRequest $request, Category $category): RedirectResponse
     {
-        $category->update([
-            ...$request->validated(),
-            'slug' => Str::slug($request->validated('name')),
-        ]);
+        try {
+            DB::transaction(function () use ($request, $category): void {
+                $category->update([
+                    ...$request->validated(),
+                    'slug' => Str::slug($request->validated('name')),
+                ]);
+            });
 
-        return back();
+            return back()->with('success', 'Category updated successfully.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Failed to update category.');
+        }
     }
 
     public function destroy(Category $category): RedirectResponse
     {
-        $category->delete();
+        try {
+            DB::transaction(function () use ($category): void {
+                $category->delete();
+            });
 
-        return back();
+            return back()->with('success', 'Category deleted successfully.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Failed to delete category.');
+        }
     }
 }
