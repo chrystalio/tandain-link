@@ -15,12 +15,12 @@ class CategoryController extends Controller
 {
     public function index(Request $request): Response
     {
-        $categories = $request->user()
-            ->categories()
+        $perPage = $request->query('perPage', 10);
+        $categories = Category::query()->where('user_id', $request->user()->id)
             ->latest()
-            ->paginate(20);
+            ->paginate($perPage);
 
-        return Inertia::render('categories/index', [
+        return inertia('categories/index', [
             'categories' => $categories,
         ]);
     }
