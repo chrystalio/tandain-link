@@ -22,7 +22,9 @@ class UpdateCategoryRequest extends FormRequest
                 'max:100',
                 Rule::unique('categories')->where('user_id', $this->user()->id)->ignore($this->category),
             ],
-            'description' => ['nullable', 'string', 'max:500'],
+            'description' => ['nullable', 'string', 'max:100'],
+            'color' => ['nullable', 'string', 'regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/'],
+            'icon' => ['nullable', 'string', 'max:50'],
         ];
     }
 }
