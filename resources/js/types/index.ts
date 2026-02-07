@@ -8,11 +8,16 @@ export type SharedData = {
     name: string;
     auth: Auth;
     sidebarOpen: boolean;
+    flash: {
+        success: string | null;
+        error: string | null;
+    };
     [key: string]: unknown;
 };
 
 export interface Category {
     id: string;
+    slug: string;
     name: string;
     description: string | null;
     color: string | null;
