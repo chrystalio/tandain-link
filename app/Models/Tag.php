@@ -17,6 +17,7 @@ class Tag extends Model
     protected $fillable = [
         'name',
         'slug',
+        'color',
     ];
 
     protected static function booted(): void
