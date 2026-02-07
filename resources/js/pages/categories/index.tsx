@@ -1,6 +1,6 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import type { ColumnFiltersState } from '@tanstack/react-table';
-import { Folder, FolderOpen, PlusCircle } from 'lucide-react';
+import { FolderOpen, PlusCircle } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import {
