@@ -1,5 +1,7 @@
 import { Link } from '@inertiajs/react';
-import { LayoutGrid } from 'lucide-react';
+import { FolderOpen, LayoutGrid, Tags } from 'lucide-react';
+import { index as categoriesIndex } from '@/actions/App/Http/Controllers/CategoryController';
+import { index as tagsIndex } from '@/actions/App/Http/Controllers/TagController';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -21,6 +23,16 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+    },
+    {
+        title: 'Categories',
+        href: categoriesIndex(),
+        icon: FolderOpen,
+    },
+    {
+        title: 'Tags',
+        href: tagsIndex(),
+        icon: Tags,
     },
 ];
 
