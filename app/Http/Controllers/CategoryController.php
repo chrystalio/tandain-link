@@ -15,7 +15,7 @@ class CategoryController extends Controller
 {
     public function index(Request $request): Response
     {
-        $perPage = $request->query('per_page', 10);
+        $perPage = (int) $request->query('per_page', 10);
         $categories = Category::query()->where('user_id', $request->user()->id)
             ->latest()
             ->paginate($perPage);
