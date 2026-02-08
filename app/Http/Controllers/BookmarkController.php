@@ -8,6 +8,7 @@ use App\Models\Bookmark;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Inertia\Response;
 
 class BookmarkController extends Controller
@@ -15,10 +16,32 @@ class BookmarkController extends Controller
     public function index(Request $request): Response
     {
         $perPage = min((int) $request->query('per_page', 20), 50);
+        $search = $request->string('search')->trim()->substr(0, 200)->toString();
+
+        if ($search !== '') {
+            $key = 'bookmark-search:'.$request->user()->id;
+            if (RateLimiter::tooManyAttempts($key, 30)) {
+                abort(429, 'Too many search requests.');
+            }
+            RateLimiter::hit($key, 60);
+        }
 
         $query = $request->user()
             ->bookmarks()
             ->with(['category', 'tags']);
+
+        if ($search !== '') {
+            if (DB::getDriverName() === 'mysql') {
+                $query->whereFullText(['title', 'url', 'description', 'notes'], $search);
+            } else {
+                $query->where(function ($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                        ->orWhere('url', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhere('notes', 'like', "%{$search}%");
+                });
+            }
+        }
 
         if ($request->filled('category')) {
             $query->whereHas('category', fn ($q) => $q->where('slug', $request->query('category')));
@@ -44,7 +67,9 @@ class BookmarkController extends Controller
 
         return inertia('bookmarks/index', [
             'bookmarks' => $bookmarks,
-            'filters' => $request->only(['category', 'tag', 'archived', 'trashed', 'sort', 'direction']),
+            'filters' => $request->only(['search', 'category', 'tag', 'archived', 'trashed', 'sort', 'direction']),
+            'categories' => $request->user()->categories()->orderBy('name')->get(['id', 'name', 'slug', 'color', 'icon']),
+            'tags' => $request->user()->tags()->orderBy('name')->get(['id', 'name', 'slug', 'color']),
         ]);
     }
 
