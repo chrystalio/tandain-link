@@ -26,6 +26,15 @@ export interface Category {
     updated_at: string;
 }
 
+export interface Tag {
+    id: string;
+    slug: string;
+    name: string;
+    color: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface PaginatedData<T> {
     data: T[];
     current_page: number;
