@@ -1,6 +1,5 @@
 import { useForm } from '@inertiajs/react';
 import { useEffect } from 'react';
-import { toast } from 'sonner';
 import {
     store,
     update,
@@ -59,7 +58,6 @@ export function CategoryFormModal({
                 onSuccess: () => {
                     onOpenChange(false);
                     reset();
-                    toast.success('Category updated successfully');
                 },
             });
         } else {
@@ -67,7 +65,6 @@ export function CategoryFormModal({
                 onSuccess: () => {
                     onOpenChange(false);
                     reset();
-                    toast.success('Category created successfully');
                 },
             });
         }
