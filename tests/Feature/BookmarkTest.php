@@ -291,3 +291,107 @@ test('tag sync replaces all tags on update', function () {
     expect($bookmark->tags->pluck('id')->sort()->values()->all())
         ->toBe($newTags->pluck('id')->sort()->values()->all());
 });
+
+// Search tests
+
+test('search filters bookmarks by title', function () {
+    $this->withoutVite();
+    $user = User::factory()->create();
+    Bookmark::factory()->create(['user_id' => $user->id, 'title' => 'Laravel Documentation']);
+    Bookmark::factory()->create(['user_id' => $user->id, 'title' => 'React Guide']);
+
+    $response = $this->actingAs($user)
+        ->get(route('bookmarks.index', ['search' => 'Laravel']));
+
+    $response->assertOk();
+    $bookmarks = $response->original->getData()['page']['props']['bookmarks']['data'];
+    expect($bookmarks)->toHaveCount(1);
+    expect($bookmarks[0]['title'])->toBe('Laravel Documentation');
+});
+
+test('search filters bookmarks by url', function () {
+    $this->withoutVite();
+    $user = User::factory()->create();
+    Bookmark::factory()->create(['user_id' => $user->id, 'title' => 'A', 'url' => 'https://github.com/laravel']);
+    Bookmark::factory()->create(['user_id' => $user->id, 'title' => 'B', 'url' => 'https://reactjs.org']);
+
+    $response = $this->actingAs($user)
+        ->get(route('bookmarks.index', ['search' => 'github']));
+
+    $response->assertOk();
+    $bookmarks = $response->original->getData()['page']['props']['bookmarks']['data'];
+    expect($bookmarks)->toHaveCount(1);
+    expect($bookmarks[0]['url'])->toContain('github.com');
+});
+
+test('search filters bookmarks by notes', function () {
+    $this->withoutVite();
+    $user = User::factory()->create();
+    Bookmark::factory()->create(['user_id' => $user->id, 'title' => 'A', 'notes' => 'Contains important meeting notes']);
+    Bookmark::factory()->create(['user_id' => $user->id, 'title' => 'B', 'notes' => null]);
+
+    $response = $this->actingAs($user)
+        ->get(route('bookmarks.index', ['search' => 'meeting']));
+
+    $response->assertOk();
+    $bookmarks = $response->original->getData()['page']['props']['bookmarks']['data'];
+    expect($bookmarks)->toHaveCount(1);
+    expect($bookmarks[0]['notes'])->toContain('meeting');
+});
+
+test('search does not leak other users bookmarks', function () {
+    $this->withoutVite();
+    $user = User::factory()->create();
+    $other = User::factory()->create();
+    Bookmark::factory()->create(['user_id' => $user->id, 'title' => 'My Secret Bookmark']);
+    Bookmark::factory()->create(['user_id' => $other->id, 'title' => 'Secret Other Bookmark']);
+
+    $response = $this->actingAs($user)
+        ->get(route('bookmarks.index', ['search' => 'Secret']));
+
+    $response->assertOk();
+    $bookmarks = $response->original->getData()['page']['props']['bookmarks']['data'];
+    expect($bookmarks)->toHaveCount(1);
+    expect($bookmarks[0]['title'])->toBe('My Secret Bookmark');
+});
+
+test('empty search returns all bookmarks', function () {
+    $this->withoutVite();
+    $user = User::factory()->create();
+    Bookmark::factory()->count(3)->create(['user_id' => $user->id]);
+
+    $response = $this->actingAs($user)
+        ->get(route('bookmarks.index', ['search' => '']));
+
+    $response->assertOk();
+    $bookmarks = $response->original->getData()['page']['props']['bookmarks']['data'];
+    expect($bookmarks)->toHaveCount(3);
+});
+
+test('search works with category and tag filters combined', function () {
+    $this->withoutVite();
+    $user = User::factory()->create();
+    $category = Category::factory()->create(['user_id' => $user->id]);
+    Bookmark::factory()->create(['user_id' => $user->id, 'title' => 'Laravel Docs', 'category_id' => $category->id]);
+    Bookmark::factory()->create(['user_id' => $user->id, 'title' => 'Laravel News', 'category_id' => null]);
+
+    $response = $this->actingAs($user)
+        ->get(route('bookmarks.index', ['search' => 'Laravel', 'category' => $category->slug]));
+
+    $response->assertOk();
+    $bookmarks = $response->original->getData()['page']['props']['bookmarks']['data'];
+    expect($bookmarks)->toHaveCount(1);
+    expect($bookmarks[0]['title'])->toBe('Laravel Docs');
+});
+
+test('search is truncated to 200 characters', function () {
+    $this->withoutVite();
+    $user = User::factory()->create();
+
+    $longQuery = str_repeat('a', 300);
+
+    $response = $this->actingAs($user)
+        ->get(route('bookmarks.index', ['search' => $longQuery]));
+
+    $response->assertOk();
+});
