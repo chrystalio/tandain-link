@@ -156,12 +156,12 @@ export default function TagsIndex({ tags }: { tags: PaginatedData<Tag> }) {
 
     useEffect(() => {
         if (flash.success) {
-            toast.success(flash.success);
+            toast.success(flash.success, { id: 'flash-success' });
         }
         if (flash.error) {
-            toast.error(flash.error);
+            toast.error(flash.error, { id: 'flash-error' });
         }
-    }, [flash]);
+    }, [flash.success, flash.error]);
 
     const handlePageChange = (page: number) => {
         router.get(index.url(), { page, per_page: tags.per_page }, { preserveScroll: true });
@@ -175,7 +175,7 @@ export default function TagsIndex({ tags }: { tags: PaginatedData<Tag> }) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Tags" />
 
-            <div className="mx-8 my-4">
+            <div className="mx-4 my-4 sm:mx-8">
                 <div className="my-5 flex items-center gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/5">
                         <Tags className="h-5 w-5 text-primary" />
