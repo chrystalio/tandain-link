@@ -35,6 +35,23 @@ export interface Tag {
     updated_at: string;
 }
 
+export interface Bookmark {
+    id: string;
+    url: string;
+    title: string;
+    description: string | null;
+    og_image_path: string | null;
+    favicon_path: string | null;
+    notes: string | null;
+    is_archived: boolean;
+    category_id: string | null;
+    category: Category | null;
+    tags: Tag[];
+    created_at: string;
+    updated_at: string;
+    deleted_at: string | null;
+}
+
 export interface PaginatedData<T> {
     data: T[];
     current_page: number;
