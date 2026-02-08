@@ -57,12 +57,12 @@ export default function Index({ categories }: CategoriesIndexProps) {
 
     useEffect(() => {
         if (flash.success) {
-            toast.success(flash.success);
+            toast.success(flash.success, { id: 'flash-success' });
         }
         if (flash.error) {
-            toast.error(flash.error);
+            toast.error(flash.error, { id: 'flash-error' });
         }
-    }, [flash]);
+    }, [flash.success, flash.error]);
 
     const handleCreate = () => {
         setEditingCategory(null);
@@ -115,7 +115,7 @@ export default function Index({ categories }: CategoriesIndexProps) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Categories" />
-            <div className="mx-8 my-4">
+            <div className="mx-4 my-4 sm:mx-8">
                 <div className="my-5 flex items-center gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/5">
                         <FolderOpen className="h-5 w-5 text-primary" />
