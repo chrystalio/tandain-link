@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BookmarkController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\TagController;
 use Illuminate\Support\Facades\Route;
@@ -22,6 +23,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::resource('tags', TagController::class)
         ->only(['index', 'store', 'update', 'destroy']);
+
+    Route::resource('bookmarks', BookmarkController::class)
+        ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+
+    Route::post('bookmarks/{bookmark}/restore', [BookmarkController::class, 'restore'])
+        ->withTrashed()
+        ->name('bookmarks.restore');
+
+    Route::delete('bookmarks/{bookmark}/force', [BookmarkController::class, 'forceDestroy'])
+        ->withTrashed()
+        ->name('bookmarks.force-destroy');
+
+    Route::patch('bookmarks/{bookmark}/archive', [BookmarkController::class, 'archive'])
+        ->name('bookmarks.archive');
 });
 
 require __DIR__.'/settings.php';
