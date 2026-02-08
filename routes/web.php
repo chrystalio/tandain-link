@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BookmarkController;
+use App\Http\Controllers\BookmarkImportExportController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\TagController;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::resource('tags', TagController::class)
         ->only(['index', 'store', 'update', 'destroy']);
+
+    Route::get('bookmarks/import-export', [BookmarkImportExportController::class, 'index'])
+        ->name('bookmarks.import-export');
+    Route::post('bookmarks/import', [BookmarkImportExportController::class, 'import'])
+        ->name('bookmarks.import');
+    Route::get('bookmarks/export/html', [BookmarkImportExportController::class, 'exportHtml'])
+        ->name('bookmarks.export-html');
+    Route::get('bookmarks/export/json', [BookmarkImportExportController::class, 'exportJson'])
+        ->name('bookmarks.export-json');
 
     Route::resource('bookmarks', BookmarkController::class)
         ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
