@@ -13,11 +13,11 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Icon, IconPicker, type IconName } from '@/components/ui/icon-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { Category } from '@/types';
-import { Icon, IconPicker, type IconName } from '@/components/ui/icon-picker';
 import { Textarea } from '@/components/ui/textarea';
+import type { Category } from '@/types';
 
 interface CategoryFormModalProps {
     open: boolean;
