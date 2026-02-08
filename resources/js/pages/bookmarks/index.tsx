@@ -2,12 +2,16 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     Archive,
     ArchiveRestore,
+    ArrowUpDown,
     Bookmark as BookmarkIcon,
+    Check,
     ChevronLeft,
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
+    ChevronsUpDown,
     ExternalLink,
+    Filter,
     FolderOpen,
     Globe,
     MoreHorizontal,
@@ -15,12 +19,14 @@ import {
     Pencil,
     Plus,
     RotateCcw,
+    Search,
     Tags,
     Trash2,
+    X,
 } from 'lucide-react';
-import { useEffect } from 'react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { useDebouncedCallback } from 'use-debounce';
 import {
     archive,
     create,
@@ -30,8 +36,18 @@ import {
     index,
     restore,
 } from '@/actions/App/Http/Controllers/BookmarkController';
+import { index as importExportIndex } from '@/actions/App/Http/Controllers/BookmarkImportExportController';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Icon, type IconName } from '@/components/ui/icon-picker';
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from '@/components/ui/command';
 import {
     Dialog,
     DialogClose,
@@ -49,6 +65,11 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
+import {
     Select,
     SelectContent,
     SelectItem,
@@ -59,8 +80,10 @@ import AppLayout from '@/layouts/app-layout';
 import type {
     Bookmark,
     BreadcrumbItem,
+    Category,
     PaginatedData,
     SharedData,
+    Tag,
 } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -100,6 +123,7 @@ type FilterTab = 'all' | 'archived' | 'trashed';
 interface BookmarksIndexProps {
     bookmarks: PaginatedData<Bookmark>;
     filters: {
+        search?: string;
         category?: string;
         tag?: string;
         archived?: string;
@@ -107,14 +131,22 @@ interface BookmarksIndexProps {
         sort?: string;
         direction?: string;
     };
+    categories: Category[];
+    tags: Tag[];
 }
 
 export default function BookmarksIndex({
     bookmarks,
     filters,
+    categories,
+    tags: availableTags,
 }: BookmarksIndexProps) {
     const { flash } = usePage<SharedData>().props;
     const [deleteBookmark, setDeleteBookmark] = useState<Bookmark | null>(null);
+    const [categoryOpen, setCategoryOpen] = useState(false);
+    const [tagOpen, setTagOpen] = useState(false);
+    const [search, setSearch] = useState(filters.search ?? '');
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
     const activeTab: FilterTab = filters.trashed
         ? 'trashed'
@@ -131,12 +163,77 @@ export default function BookmarksIndex({
         }
     }, [flash.success, flash.error]);
 
+    const buildParams = (
+        overrides: Record<string, string | number | undefined> = {},
+    ) => {
+        const params: Record<string, string | number> = {
+            per_page: bookmarks.per_page,
+        };
+        const merged = { ...filters, ...overrides };
+        if (merged.search) params.search = merged.search;
+        if (merged.category) params.category = merged.category;
+        if (merged.tag) params.tag = merged.tag;
+        if (merged.archived) params.archived = 1;
+        if (merged.trashed) params.trashed = 1;
+        return params;
+    };
+
+    const debouncedSearch = useDebouncedCallback((value: string) => {
+        router.get(
+            index.url(),
+            buildParams({ search: value || undefined, page: undefined }),
+            { preserveState: true, preserveScroll: true },
+        );
+    }, 300);
+
+    const handleSearchChange = (value: string) => {
+        setSearch(value);
+        debouncedSearch(value);
+    };
+
+    const clearSearch = () => {
+        setSearch('');
+        router.get(
+            index.url(),
+            buildParams({ search: undefined, page: undefined }),
+            { preserveState: true, preserveScroll: true },
+        );
+        searchInputRef.current?.focus();
+    };
+
     const handleTabChange = (tab: FilterTab) => {
         const params: Record<string, string | number> = {
             per_page: bookmarks.per_page,
         };
         if (tab === 'archived') params.archived = 1;
         if (tab === 'trashed') params.trashed = 1;
+        if (filters.category) params.category = filters.category;
+        if (filters.tag) params.tag = filters.tag;
+        if (filters.search) params.search = filters.search;
+        router.get(index.url(), params, { preserveScroll: true });
+    };
+
+    const handleFilterChange = (
+        key: 'category' | 'tag',
+        value: string | undefined,
+    ) => {
+        router.get(
+            index.url(),
+            buildParams({ [key]: value, page: undefined }),
+            { preserveScroll: true },
+        );
+    };
+
+    const hasActiveFilters =
+        !!filters.category || !!filters.tag || !!filters.search;
+
+    const clearFilters = () => {
+        setSearch('');
+        const params: Record<string, string | number> = {
+            per_page: bookmarks.per_page,
+        };
+        if (filters.archived) params.archived = 1;
+        if (filters.trashed) params.trashed = 1;
         router.get(index.url(), params, { preserveScroll: true });
     };
 
@@ -180,12 +277,20 @@ export default function BookmarksIndex({
                             </p>
                         </div>
                     </div>
-                    <Button asChild className="w-full sm:w-auto">
-                        <Link href={create.url()}>
-                            <Plus className="mr-1 size-4" />
-                            Add Bookmark
-                        </Link>
-                    </Button>
+                    <div className="flex w-full gap-2 sm:w-auto">
+                        <Button variant="outline" asChild className="flex-1 sm:flex-none">
+                            <Link href={importExportIndex.url()}>
+                                <ArrowUpDown className="mr-1 size-4" />
+                                Import / Export
+                            </Link>
+                        </Button>
+                        <Button asChild className="flex-1 sm:flex-none">
+                            <Link href={create.url()}>
+                                <Plus className="mr-1 size-4" />
+                                Add Bookmark
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Filter Tabs */}
@@ -217,6 +322,204 @@ export default function BookmarksIndex({
                         {bookmarks.total}{' '}
                         {bookmarks.total === 1 ? 'bookmark' : 'bookmarks'}
                     </div>
+                </div>
+
+                {/* Search + Filters */}
+                <div className="mb-4">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <input
+                            ref={searchInputRef}
+                            type="text"
+                            value={search}
+                            onChange={(e) =>
+                                handleSearchChange(e.target.value)
+                            }
+                            placeholder="Search bookmarks by title, URL, description, or notes..."
+                            className="h-9 w-full rounded-md border border-input bg-background px-9 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        />
+                        {search && (
+                            <button
+                                type="button"
+                                onClick={clearSearch}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            >
+                                <X className="h-4 w-4" />
+                                <span className="sr-only">Clear search</span>
+                            </button>
+                        )}
+                    </div>
+                </div>
+                <div className="mb-6 flex flex-wrap items-center gap-2">
+                    <Filter className="h-4 w-4 text-muted-foreground" />
+                    <Popover
+                        open={categoryOpen}
+                        onOpenChange={setCategoryOpen}
+                    >
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 justify-between gap-1"
+                            >
+                                <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />
+                                {filters.category
+                                    ? categories.find(
+                                          (c) => c.slug === filters.category,
+                                      )?.name ?? 'All categories'
+                                    : 'All categories'}
+                                <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                            className="w-[200px] p-0"
+                            align="start"
+                        >
+                            <Command>
+                                <CommandInput placeholder="Search categories..." />
+                                <CommandList>
+                                    <CommandEmpty>
+                                        No categories found.
+                                    </CommandEmpty>
+                                    <CommandGroup>
+                                        <CommandItem
+                                            value="all-categories"
+                                            onSelect={() => {
+                                                handleFilterChange(
+                                                    'category',
+                                                    undefined,
+                                                );
+                                                setCategoryOpen(false);
+                                            }}
+                                        >
+                                            <Check
+                                                className={`mr-2 h-4 w-4 ${!filters.category ? 'opacity-100' : 'opacity-0'}`}
+                                            />
+                                            All categories
+                                        </CommandItem>
+                                        {categories.map((cat) => (
+                                            <CommandItem
+                                                key={cat.id}
+                                                value={cat.name}
+                                                onSelect={() => {
+                                                    handleFilterChange(
+                                                        'category',
+                                                        filters.category ===
+                                                            cat.slug
+                                                            ? undefined
+                                                            : cat.slug,
+                                                    );
+                                                    setCategoryOpen(false);
+                                                }}
+                                            >
+                                                <Check
+                                                    className={`mr-2 h-4 w-4 ${filters.category === cat.slug ? 'opacity-100' : 'opacity-0'}`}
+                                                />
+                                                {cat.color && (
+                                                    <span
+                                                        className="mr-1.5 inline-block h-2 w-2 shrink-0 rounded-full"
+                                                        style={{
+                                                            backgroundColor:
+                                                                cat.color,
+                                                        }}
+                                                    />
+                                                )}
+                                                {cat.name}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
+                    <Popover open={tagOpen} onOpenChange={setTagOpen}>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 justify-between gap-1"
+                            >
+                                <Tags className="h-3.5 w-3.5 text-muted-foreground" />
+                                {filters.tag
+                                    ? availableTags.find(
+                                          (t) => t.slug === filters.tag,
+                                      )?.name ?? 'All tags'
+                                    : 'All tags'}
+                                <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                            className="w-[200px] p-0"
+                            align="start"
+                        >
+                            <Command>
+                                <CommandInput placeholder="Search tags..." />
+                                <CommandList>
+                                    <CommandEmpty>
+                                        No tags found.
+                                    </CommandEmpty>
+                                    <CommandGroup>
+                                        <CommandItem
+                                            value="all-tags"
+                                            onSelect={() => {
+                                                handleFilterChange(
+                                                    'tag',
+                                                    undefined,
+                                                );
+                                                setTagOpen(false);
+                                            }}
+                                        >
+                                            <Check
+                                                className={`mr-2 h-4 w-4 ${!filters.tag ? 'opacity-100' : 'opacity-0'}`}
+                                            />
+                                            All tags
+                                        </CommandItem>
+                                        {availableTags.map((tag) => (
+                                            <CommandItem
+                                                key={tag.id}
+                                                value={tag.name}
+                                                onSelect={() => {
+                                                    handleFilterChange(
+                                                        'tag',
+                                                        filters.tag ===
+                                                            tag.slug
+                                                            ? undefined
+                                                            : tag.slug,
+                                                    );
+                                                    setTagOpen(false);
+                                                }}
+                                            >
+                                                <Check
+                                                    className={`mr-2 h-4 w-4 ${filters.tag === tag.slug ? 'opacity-100' : 'opacity-0'}`}
+                                                />
+                                                {tag.color && (
+                                                    <span
+                                                        className="mr-1.5 inline-block h-2 w-2 shrink-0 rounded-full"
+                                                        style={{
+                                                            backgroundColor:
+                                                                tag.color,
+                                                        }}
+                                                    />
+                                                )}
+                                                {tag.name}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
+                    {hasActiveFilters && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 text-muted-foreground"
+                            onClick={clearFilters}
+                        >
+                            <X className="mr-1 h-3.5 w-3.5" />
+                            Clear
+                        </Button>
+                    )}
                 </div>
 
                 {/* Bookmark Grid */}
@@ -259,7 +562,14 @@ export default function BookmarksIndex({
                                                     undefined,
                                             }}
                                         >
-                                            <FolderOpen className="h-2.5 w-2.5" />
+                                            {bookmark.category.icon ? (
+                                                <Icon
+                                                    name={bookmark.category.icon as IconName}
+                                                    className="h-2.5 w-2.5"
+                                                />
+                                            ) : (
+                                                <FolderOpen className="h-2.5 w-2.5" />
+                                            )}
                                             {bookmark.category.name}
                                         </Badge>
                                     )}
