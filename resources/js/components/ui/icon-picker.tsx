@@ -1,19 +1,21 @@
 "use client";
 
+import type { VirtualItem } from '@tanstack/react-virtual';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import Fuse from 'fuse.js';
+import type { LucideProps, LucideIcon } from 'lucide-react';
+import type { IconName } from 'lucide-react/dynamic';
+import { DynamicIcon, dynamicIconImports } from 'lucide-react/dynamic';
 import * as React from "react";
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useDebounceValue } from "usehooks-ts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
-import { LucideProps, LucideIcon } from 'lucide-react';
-import { DynamicIcon, dynamicIconImports, IconName } from 'lucide-react/dynamic';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { iconsData } from "./icons-data";
-import { useVirtualizer, VirtualItem } from '@tanstack/react-virtual';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import Fuse from 'fuse.js';
-import { useDebounceValue } from "usehooks-ts";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import type { iconsData } from "./icons-data";
 
 export type IconData = typeof iconsData[number];
 

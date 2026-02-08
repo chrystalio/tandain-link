@@ -1,22 +1,23 @@
 "use client"
 
-import * as React from "react"
-import {
+import type {
     ColumnDef,
     SortingState,
+    ColumnFiltersState,
+    OnChangeFn,
+    ExpandedState,
+    Row,
+    PaginationState} from '@tanstack/react-table';
+import {
     flexRender,
     getCoreRowModel,
     useReactTable,
-    ColumnFiltersState,
     getFilteredRowModel,
     getPaginationRowModel,
-    OnChangeFn,
     getSortedRowModel,
-    getExpandedRowModel,
-    ExpandedState,
-    Row,
-    PaginationState,
+    getExpandedRowModel
 } from '@tanstack/react-table';
+import * as React from "react"
 
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import {
